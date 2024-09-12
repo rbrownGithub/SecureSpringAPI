@@ -1,6 +1,9 @@
 package org.example.securespringapi.service;
 
 import org.example.securespringapi.model.User;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 
 /**
@@ -14,6 +17,7 @@ public interface UserService {
      * @param username the username of the user to find
      * @return the User object, or null if no user is found
      */
+    @Cacheable("users")
     User findByUsername(String username);
 
     /**
@@ -22,6 +26,7 @@ public interface UserService {
      * @param user the User object to be saved
      * @return the saved User object
      */
+    @CachePut(value = "users", key = "#user.username")
     User save(User user);
 
     /**
@@ -31,4 +36,12 @@ public interface UserService {
      * @return the generated JWT token as a String
      */
     String generateToken(Authentication authentication);
+
+    /**
+     * Deletes a user by their ID.
+     *
+     * @param id the ID of the user to be deleted
+     */
+    @CacheEvict(value = "users", allEntries = true)
+    void deleteUser(Long id);
 }

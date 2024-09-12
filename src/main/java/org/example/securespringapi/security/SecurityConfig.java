@@ -12,6 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -27,12 +28,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                // CSRF Protection
+                .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/authenticate", "/api/public").permitAll()
+                        .requestMatchers("/api/authenticate", "/api/public").permitAll() // Public endpoints
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // Secured endpoints for ADMIN role
+                        .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN") // Secured endpoints for USER and ADMIN roles
                         .anyRequest().authenticated()
                 )
+                // CORS Configuration
+                .cors().and()
+                // Stateless Session Management
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // JWT Filter
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -47,6 +55,5 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
-
 
 }

@@ -67,4 +67,21 @@ public class JwtTokenUtil {
         final String username = getUsernameFromToken(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
+
+    // New method to get roles from token
+    public String getRolesFromToken(String token) {
+        Claims claims = getAllClaimsFromToken(token);
+        return claims.get("roles", String.class);
+    }
+
+    // New method to refresh the token
+    public String refreshToken(String token) {
+        final Claims claims = getAllClaimsFromToken(token);
+        claims.setIssuedAt(new Date());
+        claims.setExpiration(new Date(System.currentTimeMillis() + expiration * 1000));
+        return Jwts.builder()
+                .setClaims(claims)
+                .signWith(SignatureAlgorithm.HS512, secret)
+                .compact();
+    }
 }

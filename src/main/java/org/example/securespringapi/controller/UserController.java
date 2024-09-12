@@ -1,6 +1,7 @@
 package org.example.securespringapi.controller;
 
 import org.example.securespringapi.model.User;
+import org.example.securespringapi.model.UserRequest;
 import org.example.securespringapi.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -10,6 +11,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid; // Correct import
+
 @RestController
 @RequestMapping("/api")
 public class UserController {
@@ -17,32 +20,33 @@ public class UserController {
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
 
-    // Constructor injection
     public UserController(UserService userService, AuthenticationManager authenticationManager) {
         this.userService = userService;
         this.authenticationManager = authenticationManager;
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody User user) {
-        if (userService.findByUsername(user.getUsername()) != null) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody UserRequest userRequest) {
+        if (userService.findByUsername(userRequest.getUsername()) != null) {
             return ResponseEntity.badRequest().body("Username already exists");
         }
-        // Encrypt the password before saving
+
+        User user = new User();
+        user.setUsername(userRequest.getUsername());
+        user.setPassword(userRequest.getPassword());
+
         userService.save(user);
         return ResponseEntity.ok("User registered successfully");
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody User user) {
+    public ResponseEntity<?> loginUser(@Valid @RequestBody UserRequest userRequest) {
         try {
-            // Authenticate the user
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
+                    new UsernamePasswordAuthenticationToken(userRequest.getUsername(), userRequest.getPassword()));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            // Generate token
             String token = userService.generateToken(authentication);
             return ResponseEntity.ok(token);
         } catch (Exception e) {
@@ -53,14 +57,12 @@ public class UserController {
     @GetMapping("/user")
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<?> getUserDetails() {
-        // Logic to retrieve user details
         return ResponseEntity.ok("User details");
     }
 
     @GetMapping("/admin")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getAdminDetails() {
-        // Logic to retrieve admin details
         return ResponseEntity.ok("Admin details");
     }
 }
